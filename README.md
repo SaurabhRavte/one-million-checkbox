@@ -1,48 +1,46 @@
 # ☑ One Million Checkboxes
+
 ### by Saurabh
 
 A real-time web application where users can toggle 1,000,000 checkboxes simultaneously, with changes reflected instantly across all connected users.
 
 ---
 
-## 🖥️ Live Demo
-> Deploy link here (see deployment section)
+## Screenshots
+
+> ![DEMO1](./screenshot/one.png)
+> ![DEMO2](./screenshot/two.png)
+
+---
 
 ## 📹 Demo Video
-> YouTube unlisted video link here
+
+> https://youtu.be/0A2EPtefSp4
 
 ---
 
-## 🛠 Tech Stack
+## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Frontend | React 18, TypeScript, Vite, Tailwind CSS |
-| Backend | Node.js, Express, TypeScript |
-| Real-time | WebSockets (ws library) |
-| State Store | Redis (bitfield + pub/sub) |
-| Auth | Clerk (Google OAuth) + Custom email/password |
-| Container | Docker, Docker Compose |
+| Layer     | Technology                                   |
+| --------- | -------------------------------------------- |
+| Frontend  | React 18, TypeScript, Vite, Tailwind CSS     |
+| Backend   | Node.js, Express, TypeScript                 |
+| Real-time | WebSockets (ws library)                      |
+| Auth      | Clerk (Google OAuth) + Custom email/password |
+| Container | Docker, Docker Compose                       |
 
 ---
 
-## ✅ Features
+## Features
 
 - **1,000,000 checkboxes** rendered via HTML5 Canvas (virtual scrolling)
 - **Real-time sync** — toggle any checkbox, all users see it instantly
 - **Redis bitfield** — 1M checkbox states stored in ~122 KB
 - **Redis Pub/Sub** — cross-instance broadcasting for horizontal scaling
-- **Custom rate limiting** — sliding window in Redis, no external packages
-- **Email/password auth** — register & login with hashed passwords
-- **Google OAuth** via Clerk — one-click Google sign-in
-- **Optimistic UI** — instant local feedback, rolls back on error
-- **WebSocket auth** — token verified on socket connection
-- **Anonymous read-only** — guests see live state but can't toggle
-- **Heartbeat / reconnect** — auto-reconnects dropped WebSocket connections
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 one-million-checkbox/
@@ -106,9 +104,10 @@ one-million-checkbox/
 
 ---
 
-## 🚀 Running Locally
+## Running Locally
 
 ### Prerequisites
+
 - Node.js 20+
 - pnpm (or npm)
 - Docker & Docker Compose
@@ -118,7 +117,7 @@ one-million-checkbox/
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/yourusername/one-million-checkbox
+git clone https://github.com/SaurabhRavte/one-million-checkbox
 cd one-million-checkbox
 
 # 2. Set up environment variables
@@ -155,35 +154,36 @@ npm run dev             # Vite dev server at http://localhost:3000
 
 ---
 
-## 🔐 Environment Variables
+## Environment Variables
 
 ### Server (`server/.env`)
 
-| Variable | Description | Required |
-|---|---|---|
-| `PORT` | Server port (default: 4000) | No |
-| `REDIS_URL` | Redis connection URL | Yes |
-| `CLERK_SECRET_KEY` | Clerk secret key | For Google OAuth |
-| `CLERK_PUBLISHABLE_KEY` | Clerk publishable key | For Google OAuth |
-| `CLERK_WEBHOOK_SECRET` | Svix webhook secret | For Clerk webhooks |
-| `NODE_ENV` | `development` or `production` | No |
-| `CLIENT_URL` | Frontend URL for CORS | Yes |
+| Variable                | Description                   | Required           |
+| ----------------------- | ----------------------------- | ------------------ |
+| `PORT`                  | Server port (default: 4000)   | No                 |
+| `REDIS_URL`             | Redis connection URL          | Yes                |
+| `CLERK_SECRET_KEY`      | Clerk secret key              | For Google OAuth   |
+| `CLERK_PUBLISHABLE_KEY` | Clerk publishable key         | For Google OAuth   |
+| `CLERK_WEBHOOK_SECRET`  | Svix webhook secret           | For Clerk webhooks |
+| `NODE_ENV`              | `development` or `production` | No                 |
+| `CLIENT_URL`            | Frontend URL for CORS         | Yes                |
 
 ### Client (`client/.env`)
 
-| Variable | Description | Required |
-|---|---|---|
+| Variable                     | Description           | Required         |
+| ---------------------------- | --------------------- | ---------------- |
 | `VITE_CLERK_PUBLISHABLE_KEY` | Clerk publishable key | For Google OAuth |
-| `VITE_API_URL` | Backend API URL | Yes (prod) |
-| `VITE_WS_URL` | WebSocket server URL | Yes (prod) |
+| `VITE_API_URL`               | Backend API URL       | Yes (prod)       |
+| `VITE_WS_URL`                | WebSocket server URL  | Yes (prod)       |
 
 ---
 
-## 🔴 Redis Setup
+## Redis Setup
 
 Redis is used for three things:
 
 **1. Bitfield (checkbox state)**
+
 ```
 Key: checkboxes:bitfield
 Type: String (binary bitfield)
@@ -192,6 +192,7 @@ Operations: GETBIT, SETBIT, BITCOUNT
 ```
 
 **2. Pub/Sub (real-time broadcast)**
+
 ```
 Channel: checkbox:updates
 Publisher: checkbox.services.ts (on every toggle)
@@ -199,6 +200,7 @@ Subscriber: websocket.ts (broadcasts to all WS clients)
 ```
 
 **3. Rate limiting (sliding window)**
+
 ```
 Key pattern: rl:{namespace}:{identifier}
 Type: Sorted Set (scores = timestamps)
@@ -206,6 +208,7 @@ TTL: auto-expiring per window
 ```
 
 To inspect Redis state:
+
 ```bash
 redis-cli
 > BITCOUNT checkboxes:bitfield          # total checked
@@ -215,9 +218,10 @@ redis-cli
 
 ---
 
-## 🔒 Auth Flow
+## Auth Flow
 
 ### Email/Password
+
 1. `POST /api/auth/register` — hashes password (SHA-256 + secret salt), stores user in Redis
 2. `POST /api/auth/login` — verifies hash, issues random 32-byte session token
 3. Session token stored in Redis with 7-day TTL: `session:{token} → userId`
@@ -225,6 +229,7 @@ redis-cli
 5. `auth.middleware.ts` verifies on every protected route
 
 ### Google OAuth (Clerk)
+
 1. Frontend uses `@clerk/clerk-react` `<SignIn />` component
 2. After Clerk sign-in, `ClerkSync.tsx` detects the signed-in Clerk user
 3. Calls `POST /api/auth/clerk/exchange` with `{ clerkUserId, email, name }`
@@ -232,6 +237,7 @@ redis-cli
 5. Identical session flow from here on
 
 ### WebSocket Auth
+
 1. Client connects to `ws://host/ws`
 2. On open, sends `{ type: "auth", token: "..." }`
 3. Server calls `verifySession(token)` and attaches `userId` to socket
@@ -239,7 +245,7 @@ redis-cli
 
 ---
 
-## ⚡ WebSocket Flow
+## WebSocket Flow
 
 ```
 Client                          Server
@@ -260,11 +266,12 @@ Client                          Server
 
 ---
 
-## 🛡️ Rate Limiting Logic
+## Rate Limiting Logic
 
 Implemented in `checkbox.ratelimit.ts` using Redis sorted sets — **no external packages**.
 
 **Algorithm: Sliding Window**
+
 ```
 Key: rl:{namespace}:{identifier}
 On each request:
@@ -284,9 +291,10 @@ On each request:
 
 ---
 
-## 🌐 Deploying Online
+## Deploying Online
 
 ### Railway (simplest)
+
 ```bash
 # Install Railway CLI
 npm install -g @railway/cli
@@ -300,12 +308,14 @@ railway up
 ```
 
 ### Render
+
 1. Create a new Web Service for `server/` directory
 2. Create a new Static Site for `client/` directory
 3. Add Redis from Render's add-ons
 4. Set environment variables
 
 ### Docker on VPS (DigitalOcean/Hetzner)
+
 ```bash
 # On your VPS
 git clone https://github.com/yourusername/one-million-checkbox
@@ -320,18 +330,3 @@ docker-compose up -d --build
 
 # With nginx reverse proxy on port 80/443, proxy to :3000
 ```
-
----
-
-## 📸 Screenshots
-
-> Add screenshots here
-
----
-
-## 📝 Notes
-
-- **Canvas rendering**: The 1M grid uses HTML5 Canvas with virtual scrolling for performance. Only visible cells are drawn per frame.
-- **Compact storage**: 1M booleans in a Redis bitfield = ~122 KB vs ~8 MB for individual keys.
-- **Horizontal scaling**: Multiple server instances all subscribe to the same Redis Pub/Sub channel, so any toggle on any instance reaches every connected user.
-- **Optimistic UI**: Clicks update instantly on screen; if the server rejects (rate limit), the local state reverts.
